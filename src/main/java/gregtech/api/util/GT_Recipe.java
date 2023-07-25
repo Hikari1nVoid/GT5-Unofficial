@@ -30,11 +30,19 @@ import static net.minecraft.util.EnumChatFormatting.GRAY;
 import static net.minecraft.util.StatCollector.translateToLocal;
 
 import java.awt.Rectangle;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import javax.annotation.Nonnull;
@@ -179,10 +187,6 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
      * If this Recipe needs the Output Slots to be completely empty. Needed in case you have randomised Outputs
      */
     public boolean mNeedsEmptyOutput = false;
-    /**
-     * If this is set to true, NBT equality is required for recipe check.
-     */
-    public boolean isNBTSensitive = false;
     /**
      * Used for describing recipes that do not fit the default recipe pattern (for example Large Boiler Fuels)
      */
@@ -716,33 +720,28 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
                     for (int i = 0; i < aInputs.length; i++) {
                         ItemStack providedItem = aInputs[i];
-                        if (isNBTSensitive && !GT_Utility.areStacksEqual(providedItem, unifiedItemCost, false)) {
-                            continue;
-                        } else if (!isNBTSensitive
-                            && !GT_OreDictUnificator.isInputStackEqual(providedItem, unifiedItemCost)) {
-                                continue;
+                        if (GT_OreDictUnificator.isInputStackEqual(providedItem, unifiedItemCost)) {
+                            if (GTppRecipeHelper) { // Please see JavaDoc on GTppRecipeHelper for why this is here.
+                                if (GT_Utility.areStacksEqual(providedItem, Ic2Items.FluidCell.copy(), true)
+                                    || GT_Utility.areStacksEqual(providedItem, ItemList.Tool_DataStick.get(1L), true)
+                                    || GT_Utility.areStacksEqual(providedItem, ItemList.Tool_DataOrb.get(1L), true)) {
+                                    if (!GT_Utility.areStacksEqual(providedItem, recipeItemCost, false)) continue;
+                                }
                             }
 
-                        if (GTppRecipeHelper) { // Please see JavaDoc on GTppRecipeHelper for why this is here.
-                            if (GT_Utility.areStacksEqual(providedItem, Ic2Items.FluidCell.copy(), true)
-                                || GT_Utility.areStacksEqual(providedItem, ItemList.Tool_DataStick.get(1L), true)
-                                || GT_Utility.areStacksEqual(providedItem, ItemList.Tool_DataOrb.get(1L), true)) {
-                                if (!GT_Utility.areStacksEqual(providedItem, recipeItemCost, false)) continue;
+                            inputFound = true;
+                            if (newItemAmounts[i] == null) {
+                                newItemAmounts[i] = providedItem.stackSize;
                             }
-                        }
 
-                        inputFound = true;
-                        if (newItemAmounts[i] == null) {
-                            newItemAmounts[i] = providedItem.stackSize;
-                        }
-
-                        if (aDontCheckStackSizes || newItemAmounts[i] >= remainingCost) {
-                            newItemAmounts[i] -= remainingCost;
-                            remainingCost = 0;
-                            break;
-                        } else {
-                            remainingCost -= newItemAmounts[i];
-                            newItemAmounts[i] = 0;
+                            if (aDontCheckStackSizes || newItemAmounts[i] >= remainingCost) {
+                                newItemAmounts[i] -= remainingCost;
+                                remainingCost = 0;
+                                break;
+                            } else {
+                                remainingCost -= newItemAmounts[i];
+                                newItemAmounts[i] = 0;
+                            }
                         }
                     }
 
@@ -1278,7 +1277,6 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
             true).setSlotOverlay(false, false, GT_UITextures.OVERLAY_SLOT_DUST)
                 .setSlotOverlay(false, true, GT_UITextures.OVERLAY_SLOT_CRUSHED_ORE)
                 .setProgressBar(GT_UITextures.PROGRESSBAR_MACERATE, ProgressBar.Direction.RIGHT);
-        @Deprecated
         public static final GT_Recipe_Map sByProductList = new GT_Recipe_Map(
             new HashSet<>(1000),
             "gt.recipe.byproductlist",
@@ -1294,7 +1292,7 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
             1,
             E,
             true,
-            false).setProgressBar(GT_UITextures.PROGRESSBAR_ARROW, ProgressBar.Direction.RIGHT);
+            true).setProgressBar(GT_UITextures.PROGRESSBAR_ARROW, ProgressBar.Direction.RIGHT);
         public static final GT_Recipe_Map sReplicatorFakeRecipes = new ReplicatorFakeMap(
             new HashSet<>(100),
             "gt.recipe.replicator",
@@ -2107,6 +2105,43 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                 setNEIBackgroundSize(172, 118);
             }
 
+            public static class CircuitAssemblerRecipeMap extends GT_Recipe_Map {
+
+                public CircuitAssemblerRecipeMap(Collection<GT_Recipe> aRecipeList, String aUnlocalizedName,
+                    String aLocalName, String aNEIName, String aNEIGUIPath, int aUsualInputCount, int aUsualOutputCount,
+                    int aMinimalInputItems, int aMinimalInputFluids, int aAmperage, String aNEISpecialValuePre,
+                    int aNEISpecialValueMultiplier, String aNEISpecialValuePost, boolean aShowVoltageAmperageInNEI,
+                    boolean aNEIAllowed) {
+                    super(
+                        aRecipeList,
+                        aUnlocalizedName,
+                        aLocalName,
+                        aNEIName,
+                        aNEIGUIPath,
+                        aUsualInputCount,
+                        aUsualOutputCount,
+                        aMinimalInputItems,
+                        aMinimalInputFluids,
+                        aAmperage,
+                        aNEISpecialValuePre,
+                        aNEISpecialValueMultiplier,
+                        aNEISpecialValuePost,
+                        aShowVoltageAmperageInNEI,
+                        aNEIAllowed);
+                    useModularUI(true);
+                    setUsualFluidInputCount(2);
+                    setProgressBarPos(86, 44);
+                    setNEITransferRect(
+                        new Rectangle(
+                            progressBarPos.x - (16 / 2),
+                            progressBarPos.y,
+                            progressBarSize.width + 16,
+                            progressBarSize.height));
+                    setLogoPos(87, 99);
+                    setNEIBackgroundSize(172, 118);
+                }
+            }
+
             @Override
             public List<Pos2d> getItemInputPositions(int itemInputCount) {
                 return UIHelper.getGridPositions(itemInputCount, 60, 8, 1);
@@ -2138,75 +2173,6 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     "Average: " + formatNumbers(averageUsage)
                         + " EU/t"
                         + GT_Utility.getTierNameWithParentheses(averageUsage));
-            }
-        }
-        public static class CircuitAssemblerMultiRecipeMap extends GT_Recipe_Map {
-
-            public CircuitAssemblerMultiRecipeMap(Collection<GT_Recipe> aRecipeList, String aUnlocalizedName,
-                                                  String aLocalName, String aNEIName, String aNEIGUIPath, int aUsualInputCount, int aUsualOutputCount,
-                                                  int aMinimalInputItems, int aMinimalInputFluids, int aAmperage, String aNEISpecialValuePre,
-                                                  int aNEISpecialValueMultiplier, String aNEISpecialValuePost, boolean aShowVoltageAmperageInNEI,
-                                                  boolean aNEIAllowed) {
-                super(
-                    aRecipeList,
-                    aUnlocalizedName,
-                    aLocalName,
-                    aNEIName,
-                    aNEIGUIPath,
-                    aUsualInputCount,
-                    aUsualOutputCount,
-                    aMinimalInputItems,
-                    aMinimalInputFluids,
-                    aAmperage,
-                    aNEISpecialValuePre,
-                    aNEISpecialValueMultiplier,
-                    aNEISpecialValuePost,
-                    aShowVoltageAmperageInNEI,
-                    aNEIAllowed);
-                setNEITransferRect(new Rectangle(146, 26, 10, 18));
-            }
-
-            @Override
-            public List<Pos2d> getItemInputPositions(int itemInputCount) {
-                return UIHelper.getGridPositions(itemInputCount, 16, 8, 4);
-            }
-
-            @Override
-            public List<Pos2d> getItemOutputPositions(int itemOutputCount) {
-                return Collections.singletonList(new Pos2d(142, 8));
-            }
-
-            @Override
-            public Pos2d getSpecialItemPosition() {
-                return new Pos2d(142, 44);
-            }
-
-            @Override
-            public List<Pos2d> getFluidInputPositions(int fluidInputCount) {
-                return UIHelper.getGridPositions(fluidInputCount, 106, 8, 1);
-            }
-
-            @Override
-            public void addProgressBarUI(ModularWindow.Builder builder, Supplier<Float> progressSupplier,
-                                         Pos2d windowOffset) {
-                int bar1Width = 17;
-                int bar2Width = 18;
-                builder.widget(
-                    new ProgressBar().setTexture(GT_UITextures.PROGRESSBAR_ASSEMBLY_LINE_1, 17)
-                        .setDirection(ProgressBar.Direction.RIGHT)
-                        .setProgress(() -> progressSupplier.get() * ((float) (bar1Width + bar2Width) / bar1Width))
-                        .setSynced(false, false)
-                        .setPos(new Pos2d(88, 8).add(windowOffset))
-                        .setSize(bar1Width, 72));
-                builder.widget(
-                    new ProgressBar().setTexture(GT_UITextures.PROGRESSBAR_ASSEMBLY_LINE_2, 18)
-                        .setDirection(ProgressBar.Direction.RIGHT)
-                        .setProgress(
-                            () -> (progressSupplier.get() - ((float) bar1Width / (bar1Width + bar2Width)))
-                                * ((float) (bar1Width + bar2Width) / bar2Width))
-                        .setSynced(false, false)
-                        .setPos(new Pos2d(124, 8).add(windowOffset))
-                        .setSize(bar2Width, 72));
             }
         }
 
@@ -2660,7 +2626,7 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     b.validateInputCount(1, 2)
                         .validateOutputCount(1, 4)
                         .validateNoOutputFluid();
-                    if ((b.getFluidInputs() != null && b.getFluidInputs().length > 0) || !b.isValid())
+                    if (b.getFluidInputs() != null || !b.isValid())
                         return buildOrEmpty(b.validateInputFluidCount(1, 1));
                     int aDuration = b.getDuration(), aEUt = b.getEUt();
                     Collection<GT_Recipe> ret = new ArrayList<>();
@@ -3101,13 +3067,13 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     }
                     return result;
                 });
-        public static final GT_Recipe_Map sCircuitAssemblerMulti = new CircuitAssemblerMultiRecipeMap(
+        public static final GT_Recipe_Map sCircuitAssemblerMulti = new GT_Recipe_Map(
             new HashSet<>(8200),
             "gt.recipe.circuitassemblermulti",
-            "Circuit Assembler Multi",
             null,
-            GregTech.getResourcePath(TEXTURES_GUI_BASICMACHINES, "LCRNEI"),
-            16,
+            null,
+            GregTech.getResourcePath(TEXTURES_GUI_BASICMACHINES, "Assembler2"),
+            9,
             1,
             1,
             0,
@@ -3116,9 +3082,10 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
             1,
             E,
             true,
-            true).setSlotOverlay(false, false, true, true, GT_UITextures.OVERLAY_SLOT_CIRCUIT)
-            .setUsualFluidInputCount(4)
-            .setDisableOptimize(true);
+            true).setSlotOverlay(false, false, GT_UITextures.OVERLAY_SLOT_CIRCUIT)
+                .setRecipeConfigFile("assembling", FIRST_ITEM_OUTPUT)
+                .setProgressBar(GT_UITextures.PROGRESSBAR_ASSEMBLE, ProgressBar.Direction.RIGHT)
+                .setDisableOptimize(true);
 
         public static final GT_Recipe_Map_IC2NuclearFake sIC2NuclearFakeRecipe = (GT_Recipe_Map_IC2NuclearFake) new GT_Recipe_Map_IC2NuclearFake()
             .setDisableOptimize(true);
@@ -4078,40 +4045,9 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
          * @return Result of the recipe search
          */
         @Nonnull
-        public final FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
             boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
             ItemStack... aInputs) {
-            return findRecipeWithResult(
-                aRecipe,
-                recipe -> aVoltage * mAmperage >= recipe.mEUt,
-                aNotUnificated,
-                aDontCheckStackSizes,
-                aVoltage,
-                aFluids,
-                aSpecialSlot,
-                aInputs);
-        }
-
-        /**
-         * finds a Recipe matching the aFluid and ItemStack Inputs.
-         *
-         * @param aRecipe              in case this is != null it will try to use this Recipe first when looking things
-         *                             up.
-         * @param aIsValidRecipe       predicate to help identify, if the recipe matches our machine
-         * @param aNotUnificated       if this is T the Recipe searcher will unificate the ItemStack Inputs
-         * @param aDontCheckStackSizes if set to false will only return recipes that can be executed at least once with
-         *                             the provided input
-         * @param aVoltage             Voltage of the Machine or Long.MAX_VALUE if it has no Voltage
-         * @param aFluids              the Fluid Inputs
-         * @param aSpecialSlot         the content of the Special Slot, the regular Manager doesn't do anything with
-         *                             this, but some custom ones do.
-         * @param aInputs              the Item Inputs
-         * @return Result of the recipe search
-         */
-        @Nonnull
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
             // No Recipes? Well, nothing to be found then.
             if (mRecipeList.isEmpty()) return NOT_FOUND;
 
@@ -4142,9 +4078,9 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                 && aRecipe.isRecipeInputEqual(false, aDontCheckStackSizes, aFluids, aInputs)) {
                     if (!isSpecialSlotSensitive
                         || GT_Utility.areStacksEqualOrNull((ItemStack) aRecipe.mSpecialItems, aSpecialSlot)) {
-                        if (aRecipe.mEnabled && aIsValidRecipe.test(aRecipe)) {
-                            return ofSuccess(aRecipe);
-                        }
+                        return aRecipe.mEnabled && aVoltage * mAmperage >= aRecipe.mEUt
+                            ? FindRecipeResult.ofSuccess(aRecipe)
+                            : FindRecipeResult.ofInsufficientVoltage(aRecipe);
                     }
                 }
 
@@ -4155,9 +4091,9 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     && tRecipe.isRecipeInputEqual(false, aDontCheckStackSizes, aFluids, aInputs)) {
                         if (!isSpecialSlotSensitive
                             || GT_Utility.areStacksEqualOrNull((ItemStack) tRecipe.mSpecialItems, aSpecialSlot)) {
-                            if (tRecipe.mEnabled && aIsValidRecipe.test(tRecipe)) {
-                                return ofSuccess(tRecipe);
-                            }
+                            return tRecipe.mEnabled && aVoltage * mAmperage >= tRecipe.mEUt
+                                ? FindRecipeResult.ofSuccess(tRecipe)
+                                : FindRecipeResult.ofInsufficientVoltage(tRecipe);
                         }
                     }
                 tRecipes = mRecipeItemMap.get(new GT_ItemStack(tStack, true));
@@ -4165,9 +4101,9 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     && tRecipe.isRecipeInputEqual(false, aDontCheckStackSizes, aFluids, aInputs)) {
                         if (!isSpecialSlotSensitive
                             || GT_Utility.areStacksEqualOrNull((ItemStack) tRecipe.mSpecialItems, aSpecialSlot)) {
-                            if (tRecipe.mEnabled && aIsValidRecipe.test(tRecipe)) {
-                                return ofSuccess(tRecipe);
-                            }
+                            return tRecipe.mEnabled && aVoltage * mAmperage >= tRecipe.mEUt
+                                ? FindRecipeResult.ofSuccess(tRecipe)
+                                : FindRecipeResult.ofInsufficientVoltage(tRecipe);
                         }
                     }
             }
@@ -4182,9 +4118,9 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     && tRecipe.isRecipeInputEqual(false, aDontCheckStackSizes, aFluids, aInputs)) {
                         if (!isSpecialSlotSensitive
                             || GT_Utility.areStacksEqualOrNull((ItemStack) tRecipe.mSpecialItems, aSpecialSlot)) {
-                            if (tRecipe.mEnabled && aIsValidRecipe.test(tRecipe)) {
-                                return ofSuccess(tRecipe);
-                            }
+                            return tRecipe.mEnabled && aVoltage * mAmperage >= tRecipe.mEUt
+                                ? FindRecipeResult.ofSuccess(tRecipe)
+                                : FindRecipeResult.ofInsufficientVoltage(tRecipe);
                         }
                     }
             }
@@ -5051,9 +4987,9 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
         @Nonnull
         @Override
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+            boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
+            ItemStack... aInputs) {
             if (aInputs == null || aInputs.length == 0 || aInputs[0] == null) return NOT_FOUND;
             if (aRecipe != null && aRecipe.isRecipeInputEqual(false, true, aFluids, aInputs))
                 return FindRecipeResult.ofSuccess(aRecipe);
@@ -5108,9 +5044,9 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
         @Nonnull
         @Override
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+            boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
+            ItemStack... aInputs) {
             if (aInputs == null || aInputs.length == 0 || aInputs[0] == null) return NOT_FOUND;
             if (aRecipe != null && aRecipe.isRecipeInputEqual(false, true, aFluids, aInputs))
                 return FindRecipeResult.ofSuccess(aRecipe);
@@ -5228,13 +5164,12 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
         @Nonnull
         @Override
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+            boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
+            ItemStack... aInputs) {
             if (aInputs == null || aInputs.length == 0 || !ItemList.IC2_Scrapbox.isStackEqual(aInputs[0], false, true))
                 return super.findRecipeWithResult(
                     aRecipe,
-                    aIsValidRecipe,
                     aNotUnificated,
                     aDontCheckStackSizes,
                     aVoltage,
@@ -5244,7 +5179,6 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
             ItemStack tOutput = GT_ModHandler.getRandomScrapboxDrop();
             if (tOutput == null) return super.findRecipeWithResult(
                 aRecipe,
-                aIsValidRecipe,
                 aNotUnificated,
                 aDontCheckStackSizes,
                 aVoltage,
@@ -5305,12 +5239,11 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
         @Nonnull
         @Override
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+            boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
+            ItemStack... aInputs) {
             FindRecipeResult result = super.findRecipeWithResult(
                 aRecipe,
-                aIsValidRecipe,
                 aNotUnificated,
                 aDontCheckStackSizes,
                 aVoltage,
@@ -5406,9 +5339,9 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
         @Nonnull
         @Override
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+            boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
+            ItemStack... aInputs) {
             if (aInputs == null || aInputs.length == 0 || aInputs[0] == null) return NOT_FOUND;
             if (aRecipe != null && aRecipe.isRecipeInputEqual(false, true, aFluids, aInputs))
                 return FindRecipeResult.ofSuccess(aRecipe);
@@ -5461,13 +5394,12 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
         @Nonnull
         @Override
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+            boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
+            ItemStack... aInputs) {
             if (aInputs == null || aInputs.length == 0 || aInputs[0] == null || !GregTech_API.sPostloadFinished)
                 return super.findRecipeWithResult(
                     aRecipe,
-                    aIsValidRecipe,
                     aNotUnificated,
                     aDontCheckStackSizes,
                     aVoltage,
@@ -5476,7 +5408,6 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     aInputs);
             FindRecipeResult result = super.findRecipeWithResult(
                 aRecipe,
-                aIsValidRecipe,
                 aNotUnificated,
                 aDontCheckStackSizes,
                 aVoltage,
@@ -5581,13 +5512,12 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
         @Nonnull
         @Override
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+            boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
+            ItemStack... aInputs) {
 
             FindRecipeResult result = super.findRecipeWithResult(
                 aRecipe,
-                aIsValidRecipe,
                 true,
                 aDontCheckStackSizes,
                 aVoltage,
@@ -5651,12 +5581,11 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
         @Nonnull
         @Override
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+            boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
+            ItemStack... aInputs) {
             FindRecipeResult result = super.findRecipeWithResult(
                 aRecipe,
-                aIsValidRecipe,
                 aNotUnificated,
                 aDontCheckStackSizes,
                 aVoltage,
@@ -5710,7 +5639,7 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
             output.setStackDisplayName(mold.getDisplayName());
             GT_Recipe recipe = new GT_Recipe(
                 false,
-                new ItemStack[] { GT_Utility.copyAmount(0, mold), GT_Utility.copyAmount(1, input) },
+                new ItemStack[] { ItemList.Shape_Mold_Name.get(0), GT_Utility.copyAmount(1, input) },
                 new ItemStack[] { output },
                 null,
                 null,
@@ -5720,7 +5649,6 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                 8,
                 0);
             recipe.mCanBeBuffered = false;
-            recipe.isNBTSensitive = true;
             return FindRecipeResult.ofSuccess(recipe);
         }
     }
@@ -5754,12 +5682,11 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
 
         @Nonnull
         @Override
-        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, Predicate<GT_Recipe> aIsValidRecipe,
-            boolean aNotUnificated, boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids,
-            ItemStack aSpecialSlot, ItemStack... aInputs) {
+        public FindRecipeResult findRecipeWithResult(GT_Recipe aRecipe, boolean aNotUnificated,
+            boolean aDontCheckStackSizes, long aVoltage, FluidStack[] aFluids, ItemStack aSpecialSlot,
+            ItemStack... aInputs) {
             FindRecipeResult result = super.findRecipeWithResult(
                 aRecipe,
-                aIsValidRecipe,
                 aNotUnificated,
                 aDontCheckStackSizes,
                 aVoltage,
