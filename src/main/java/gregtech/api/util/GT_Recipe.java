@@ -3102,7 +3102,7 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
             1,
             0,
             1,
-            E,
+            "Casing Tier : ",
             1,
             E,
             true,
