@@ -6,9 +6,11 @@ import static gregtech.api.enums.Textures.BlockIcons.OVERLAY_ME_INPUT_HATCH_ACTI
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
+import gregtech.api.metatileentity.implementations.GT_MetaTileEntity_MultiBlockBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
@@ -427,8 +429,15 @@ public class GT_MetaTileEntity_Hatch_InputBus_ME extends GT_MetaTileEntity_Hatch
                             IMEMonitor<IAEItemStack> sg = proxy.getStorage()
                                 .getItemInventory();
                             IAEItemStack request = AEItemStack.create(mInventory[i]);
-                            request.setStackSize(savedStackSizes[i] - (oldStack == null ? 0 : oldStack.stackSize));
-                            sg.extractItems(request, Actionable.MODULATE, getRequestSource());
+                            int toExtract = savedStackSizes[i] - (oldStack == null ? 0 : oldStack.stackSize);
+                            request.setStackSize(toExtract);
+                            if (sg.extractItems(request, Actionable.MODULATE, getRequestSource()).getStackSize() != toExtract) {
+                                GT_MetaTileEntity_MultiBlockBase controller = CURRENT_CONTROLLER.get();
+                                if (controller != null) {
+                                    controller.criticalStopMachine();
+                                    return;
+                                }
+                            }
                             proxy.getEnergy()
                                 .extractAEPower(request.getStackSize(), Actionable.MODULATE, PowerMultiplier.CONFIG);
                             setInventorySlotContents(i + SLOT_COUNT, oldStack);
@@ -611,4 +620,14 @@ public class GT_MetaTileEntity_Hatch_InputBus_ME extends GT_MetaTileEntity_Hatch
         tag.setInteger("minStackSize", minAutoPullStackSize);
         super.getWailaNBTData(player, tile, tag, world, x, y, z);
     }
+
+    // region hack
+    private static Supplier<GT_MetaTileEntity_MultiBlockBase> CURRENT_CONTROLLER;
+
+    public static void setCurrentController(Supplier<GT_MetaTileEntity_MultiBlockBase> currentController) {
+        if (CURRENT_CONTROLLER != null)
+            throw new IllegalStateException();
+        CURRENT_CONTROLLER = currentController;
+    }
+    // endregion
 }

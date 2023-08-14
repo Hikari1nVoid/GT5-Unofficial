@@ -1400,9 +1400,19 @@ public abstract class GT_MetaTileEntity_MultiBlockBase extends MetaTileEntity
             if (isValidMetaTileEntity(tHatch)) tHatch.startRecipeProcessing();
     }
 
-    protected void endRecipeProcessing() {
-        for (GT_MetaTileEntity_Hatch_InputBus tHatch : mInputBusses)
-            if (isValidMetaTileEntity(tHatch)) tHatch.endRecipeProcessing();
+    /*
+     * this is a duct tape solution for me input bus. if you ever need to override this, bug other devs to fix that
+     * first. this mess with thread local should NOT keep on and become a permanent thing, unless we have decided this
+     * utility should be generally available to every phase of multiblock or MTE ticking.
+     */
+    protected final void endRecipeProcessing() {
+        CURRENT_TICKING.set(this);
+        try {
+            for (GT_MetaTileEntity_Hatch_InputBus tHatch : mInputBusses)
+                if (isValidMetaTileEntity(tHatch)) tHatch.endRecipeProcessing();
+        } finally {
+            CURRENT_TICKING.remove();
+        }
     }
 
     protected static <T extends GT_MetaTileEntity_Hatch> T identifyHatch(IGregTechTileEntity aTileEntity,
@@ -2242,4 +2252,13 @@ public abstract class GT_MetaTileEntity_MultiBlockBase extends MetaTileEntity
     protected void setExoticEnergyHatches(List<GT_MetaTileEntity_Hatch> ExoticEnergyHatches) {
         this.mExoticEnergyHatches = ExoticEnergyHatches;
     }
+
+    // region hack
+    // this is kept this way instead of a public API to prevent more people from abusing a hack instead of turning this
+    // into mature maintainable API
+    private static final ThreadLocal<GT_MetaTileEntity_MultiBlockBase> CURRENT_TICKING = new ThreadLocal<>();
+    static {
+        GT_MetaTileEntity_Hatch_InputBus_ME.setCurrentController(CURRENT_TICKING::get);
+    }
+    // endregion
 }
