@@ -114,7 +114,7 @@ public class GT_MetaTileEntity_CircuitAssemblyMulti
 
     @Override
     public GT_Recipe.GT_Recipe_Map getRecipeMap() {
-        return GT_Recipe_Map.sCircuitAssemblerMulti;
+        return GT_Recipe_Map.sCircuitAssemblerRecipes;
     }
 
     private String ownerUUID;
