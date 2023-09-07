@@ -4157,8 +4157,8 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     && tRecipe.isRecipeInputEqual(false, aDontCheckStackSizes, aFluids, aInputs)) {
                         if (!isSpecialSlotSensitive
                             || GT_Utility.areStacksEqualOrNull((ItemStack) tRecipe.mSpecialItems, aSpecialSlot)) {
-                            if (aRecipe.mEnabled && aIsValidRecipe.test(aRecipe)) {
-                                return ofSuccess(aRecipe);
+                            if (tRecipe.mEnabled && aIsValidRecipe.test(tRecipe)) {
+                                return ofSuccess(tRecipe);
                             }
                         }
                     }
@@ -4167,8 +4167,8 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     && tRecipe.isRecipeInputEqual(false, aDontCheckStackSizes, aFluids, aInputs)) {
                         if (!isSpecialSlotSensitive
                             || GT_Utility.areStacksEqualOrNull((ItemStack) tRecipe.mSpecialItems, aSpecialSlot)) {
-                            if (aRecipe.mEnabled && aIsValidRecipe.test(aRecipe)) {
-                                return ofSuccess(aRecipe);
+                            if (tRecipe.mEnabled && aIsValidRecipe.test(tRecipe)) {
+                                return ofSuccess(tRecipe);
                             }
                         }
                     }
@@ -4184,8 +4184,8 @@ public class GT_Recipe implements Comparable<GT_Recipe> {
                     && tRecipe.isRecipeInputEqual(false, aDontCheckStackSizes, aFluids, aInputs)) {
                         if (!isSpecialSlotSensitive
                             || GT_Utility.areStacksEqualOrNull((ItemStack) tRecipe.mSpecialItems, aSpecialSlot)) {
-                            if (aRecipe.mEnabled && aIsValidRecipe.test(aRecipe)) {
-                                return ofSuccess(aRecipe);
+                            if (tRecipe.mEnabled && aIsValidRecipe.test(tRecipe)) {
+                                return ofSuccess(tRecipe);
                             }
                         }
                     }
