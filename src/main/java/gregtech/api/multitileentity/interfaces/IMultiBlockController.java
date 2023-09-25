@@ -12,6 +12,8 @@ import com.gtnewhorizons.modularui.api.screen.ModularWindow;
 import com.gtnewhorizons.modularui.api.screen.UIBuildContext;
 
 import gregtech.api.enums.InventoryType;
+import gregtech.api.gui.GUIHost;
+import gregtech.api.gui.GUIProvider;
 import gregtech.api.logic.FluidInventoryLogic;
 import gregtech.api.logic.ItemInventoryLogic;
 import gregtech.api.logic.PowerLogic;
@@ -20,7 +22,7 @@ import gregtech.api.logic.interfaces.ItemInventoryLogicHost;
 import gregtech.api.multitileentity.enums.MultiTileCasingPurpose;
 
 public interface IMultiBlockController
-    extends IMultiTileEntity, FluidInventoryLogicHost, ItemInventoryLogicHost, UpgradableMuTE {
+    extends IMultiTileEntity, FluidInventoryLogicHost, ItemInventoryLogicHost, UpgradableMuTE, GUIHost {
 
     boolean checkStructure(boolean aForceReset);
 
@@ -39,8 +41,6 @@ public interface IMultiBlockController
     void unregisterCaseWithPurpose(MultiTileCasingPurpose purpose, IMultiBlockPart part);
 
     PowerLogic getPowerLogic();
-
-    ModularWindow createWindowGUI(UIBuildContext buildContext);
 
     UUID registerItemInventory(int slots, int tier, @Nonnull InventoryType type, boolean isUpgradeInventory);
 
